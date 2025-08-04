@@ -3,15 +3,17 @@ export default defineBackground(() => {
 
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error) => console.error(error));
+    .catch((error: unknown) => console.error(error));
 
-
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((
+    request: { type: string; message?: string }, 
+    _sender: chrome.runtime.MessageSender, 
+    sendResponse: (response: { reply: string }) => void
+  ) => {
     if (request.type === "greeting") {
       console.log("Content script said:", request.message);
       sendResponse({ reply: "Hello from background!" });
     }
-    // Return true if you're sending the response asynchronously
   });
 });
 

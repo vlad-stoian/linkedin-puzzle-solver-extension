@@ -1,26 +1,17 @@
 <script lang="ts" setup>
+import { computed } from 'vue';
 import Moon from '~/components/icons/Moon.vue';
 import Sun from '~/components/icons/Sun.vue';
+import { useStorage } from '@/composables/useStorage';
+import type { TangoSolution } from '@/types/solutions';
 
-let tangoSolution = ref(Array.from({ length: 6 }, () => Array(6).fill(0)));
+const defaultSolution: TangoSolution = {
+  grid: []
+};
 
-chrome.storage.local.get(["tangoSolution"]).then((result) => {
-    console.log("Value is " + result);
+const { data: tangoSolution, loading, error } = useStorage<TangoSolution>('tangoSolution', defaultSolution);
 
-    if (!result || !result.tangoSolution) {
-        console.error("No tangoSolution found in storage.");
-        return;
-    }
-    try {
-        tangoSolution.value = JSON.parse(result.tangoSolution);
-    } catch (e) {
-        console.error("Error parsing tangoSolution:", e);
-        return;
-    }
-    console.log("Parsed tangoSolution:", tangoSolution);
-}).catch((error) => {
-    console.error("Error retrieving tangoSolution from storage:", error);
-});
+const grid = computed(() => tangoSolution.value.grid || []);
 
 </script>
 
@@ -28,9 +19,21 @@ chrome.storage.local.get(["tangoSolution"]).then((result) => {
     <div>
         <p>Tango Solution:</p>
 
-        <table style="margin: 0 auto;">
-            <tr v-for="row in tangoSolution">
-                <td v-for="cell in row">
+        <div v-if="loading" class="loading">
+            Loading solution...
+        </div>
+        
+        <div v-else-if="error" class="error">
+            Error: {{ error }}
+        </div>
+        
+        <div v-else-if="!grid.length" class="no-data">
+            No solution data available.
+        </div>
+        
+        <table v-else class="solution-table">
+            <tr v-for="(row, rowIndex) in grid" :key="`row-${rowIndex}`">
+                <td v-for="(cell, cellIndex) in row" :key="`cell-${rowIndex}-${cellIndex}`">
                     <Sun v-if="cell === 'ZERO'" class="cell" />
                     <Moon v-else class="cell" />
                 </td>
@@ -41,11 +44,34 @@ chrome.storage.local.get(["tangoSolution"]).then((result) => {
 </template>
 
 <style scoped>
+.loading, .error, .no-data {
+    padding: 20px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.no-data {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.solution-table {
+    margin: 0 auto;
+}
+
 .cell {
     color: white;
     height: 48px;
     width: 48px;
-
     transform: scaleX(-1);
     transform-origin: center;
 }

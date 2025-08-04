@@ -1,29 +1,25 @@
 <script lang="ts" setup>
 import Star from '~/components/icons/Star.vue';
+import { useStorage } from '@/composables/useStorage';
+import type { QueensSolution } from '@/types/solutions';
 
-let queensSolution = ref({
+const defaultSolution: QueensSolution = {
     queenPositions: [],
     gridSize: 0,
     gridColors: []
-});
+};
 
-chrome.storage.local.get(["queensSolution"]).then((result) => {
-    console.log("Value is " + result);
+const { data: queensSolution, loading, error } = useStorage<QueensSolution>('queensSolution', defaultSolution);
 
-    if (!result || !result.queensSolution) {
-        console.error("No queensSolution found in storage.");
-        return;
-    }
-    try {
-        queensSolution.value = JSON.parse(result.queensSolution);
-    } catch (e) {
-        console.error("Error parsing queensSolution:", e);
-        return;
-    }
-    console.log("Parsed queensSolution:", queensSolution);
-}).catch((error) => {
-    console.error("Error retrieving queensSolution from storage:", error);
-});
+const getCellColorClass = (row: number, col: number): string => {
+    const index = row * queensSolution.value.gridSize + col;
+    const color = queensSolution.value.gridColors[index]?.color;
+    return color !== undefined ? `color-${color}` : '';
+};
+
+const hasQueen = (row: number, col: number): boolean => {
+    return queensSolution.value.queenPositions.some(pos => pos.row === row && pos.col === col);
+};
 
 </script>
 
@@ -31,13 +27,23 @@ chrome.storage.local.get(["queensSolution"]).then((result) => {
     <div>
         <p>Queens Solution:</p>
 
-        <table style="margin: 0 auto;">
-            <tr v-for="(_, row) in queensSolution.gridSize" :key="row">
-                <td v-for="(_, col) in queensSolution.gridSize"
-                    :class="['cell', 'color-' + queensSolution.gridColors[row * queensSolution.gridSize + col]?.color]"
-                    :key="col">
-                    <Star v-if="queensSolution.queenPositions.some(pos => pos.row === row && pos.col === col)"
-                        class="star" />
+        <div v-if="loading" class="loading">
+            Loading solution...
+        </div>
+
+        <div v-else-if="error" class="error">
+            Error: {{ error }}
+        </div>
+
+        <div v-else-if="!queensSolution.gridSize" class="no-data">
+            No solution data available.
+        </div>
+
+        <table v-else class="solution-table">
+            <tr v-for="(_, row) in queensSolution.gridSize" :key="`row-${row}`">
+                <td v-for="(_, col) in queensSolution.gridSize" :class="['cell', getCellColorClass(row, col)]"
+                    :key="`cell-${row}-${col}`">
+                    <Star v-if="hasQueen(row, col)" class="star" />
                 </td>
             </tr>
         </table>
@@ -46,6 +52,32 @@ chrome.storage.local.get(["queensSolution"]).then((result) => {
 </template>
 
 <style scoped>
+.loading,
+.error,
+.no-data {
+    padding: 20px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.no-data {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.solution-table {
+    margin: 0 auto;
+}
+
 .cell {
     color: white;
     height: 48px;

@@ -6,7 +6,7 @@ export default defineContentScript({
   world: "MAIN",
   main() {
 
-    window.navigation.addEventListener("navigate", (event) => {
+    (window as any).navigation?.addEventListener("navigate", (event: NavigateEvent) => {
       console.log("Navigation event detected:", event);
 
       const observer = new MutationObserver(() => {
@@ -36,7 +36,10 @@ declare global {
   interface Window {
     Ember: any;
     Application: any;
-    chrome: any;
+  }
+
+  interface NavigateEvent extends Event {
+    destination: { url: string };
   }
 }
 
@@ -136,11 +139,11 @@ function loadEmber(): any {
   let Ember;
 
   try {
-    Ember = requireModule('ember').default
-      || require('ember').default
-      || window.require('ember').default;
+    Ember = (window as any).requireModule?.('ember')?.default
+      || (window as any).require?.('ember')?.default
+      || (window as any).Ember;
   } catch {
-    Ember = window.Ember;
+    Ember = (window as any).Ember;
   }
 
   return Ember;
@@ -165,7 +168,7 @@ function extractTangoSolution(nodes: any[]): { [key: string]: any } {
       solution[node.instance.row][node.instance.col] = node.args.named.cellData.solution;
     }
   }
-  return solution;
+  return { grid: solution };
 }
 
 function extractCrossclimbSolution(nodes: any[]): { [key: string]: any } {
@@ -226,65 +229,6 @@ function extractQueensSolution(nodes: any[]): { [key: string]: any } {
   };
 }
 
-function hasSolutionFieldIterative(root: any): boolean {
-  if (typeof root !== 'object' || root === null) return false;
-
-  const seen = new Set<any>();
-  const stack = [root];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current || typeof current !== 'object') continue;
-    if (seen.has(current)) continue;
-
-    seen.add(current);
-
-    if ('solution' in current) return true;
-
-    if (Array.isArray(current)) {
-      for (const item of current) {
-        stack.push(item);
-      }
-    } else {
-      for (const key of Object.keys(current)) {
-        stack.push(current[key]);
-      }
-    }
-  }
-
-  return false;
-}
-
-function findSolutionPath(root: any): string[] | null {
-  if (typeof root !== 'object' || root === null) return null;
-
-  const seen = new Set<any>();
-  const stack: { node: any; path: string[] }[] = [{ node: root, path: [] }];
-
-  while (stack.length > 0) {
-    const { node, path } = stack.pop()!;
-    if (!node || typeof node !== 'object') continue;
-    if (seen.has(node)) continue;
-
-    seen.add(node);
-
-    if ('solution' in node) {
-      return [...path, 'solution'];
-    }
-
-    if (Array.isArray(node)) {
-      node.forEach((item, index) => {
-        stack.push({ node: item, path: [...path, `[${index}]`] });
-      });
-    } else {
-      for (const key of Object.keys(node)) {
-        stack.push({ node: node[key], path: [...path, key] });
-      }
-    }
-  }
-
-  return null; // Not found
-}
 
 
 
