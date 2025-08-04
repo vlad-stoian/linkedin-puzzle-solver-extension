@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, type Ref } from 'vue';
+import { computed } from 'vue';
 import { useStorage } from '@/composables/useStorage';
 import type { ZipSolution } from '@/types/solutions';
 

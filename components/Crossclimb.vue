@@ -1,52 +1,44 @@
 <script lang="ts" setup>
-
+import { ref, onMounted, onUpdated, onUnmounted, computed } from 'vue';
 import arrowLine from 'arrow-line';
+import { useStorage } from '@/composables/useStorage';
+import type { CrossclimbSolution } from '@/types/solutions';
 
-let crossclimbSolution = ref(Array.from({ length: 6 }, () => Array(6).fill(0)));
+const defaultSolution: CrossclimbSolution = [];
 
-chrome.storage.local.get(["crossclimbSolution"]).then((result) => {
-    console.log("Value is " + result);
+const { data: crossclimbSolution, loading, error } = useStorage<CrossclimbSolution>('crossclimbSolution', defaultSolution);
 
-    if (!result || !result.crossclimbSolution) {
-        console.error("No crossclimbSolution found in storage.");
-        return;
-    }
-    try {
-        crossclimbSolution.value = JSON.parse(result.crossclimbSolution);
-    } catch (e) {
-        console.error("Error parsing crossclimbSolution:", e);
-        return;
-    }
-    console.log("Parsed crossclimbSolution:", crossclimbSolution);
-}).catch((error) => {
-    console.error("Error retrieving crossclimbSolution from storage:", error);
+const initialOrder = computed(() => {
+    return crossclimbSolution.value.slice().sort((a, b) => a.initialIndex - b.initialIndex);
 });
 
-function initial(crossclimbSolution: any[]) {
-    return crossclimbSolution.slice().sort((a, b) => a.initialIndex - b.initialIndex);
-}
+const sortedOrder = computed(() => {
+    return crossclimbSolution.value.slice().sort((a, b) => a.solutionIndex - b.solutionIndex);
+});
 
-function sorted(crossclimbSolution: any[]) {
-    return crossclimbSolution.slice().sort((a, b) => a.solutionIndex - b.solutionIndex);
-}
+const arrows = ref<any[]>([]);
 
-let arrows = []
+// 12 colors for the lines very pleasant to the eye
+const colors = [
+    '#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#8E44AD',
+    '#E74C3C', '#3498DB', '#2ECC71', '#9B59B6', '#F39C12',
+    '#D35400', '#1ABC9C'
+];
 
-onUpdated(() => {
+const createArrows = () => {
+    // Clean up existing arrows
+    arrows.value.forEach(arrow => arrow.remove());
+    arrows.value = [];
+
+    if (!crossclimbSolution.value.length) return;
+
     for (let i = 0; i < crossclimbSolution.value.length; i++) {
         const item = crossclimbSolution.value[i];
 
-        // 12 colors for the lines very pleasant to the eye
-        const colors = [
-            '#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#8E44AD',
-            '#E74C3C', '#3498DB', '#2ECC71', '#9B59B6', '#F39C12',
-            '#D35400', '#1ABC9C'
-        ];
-
         console.log(`Creating leader line from #init-${item.initialIndex} to #sorted-${item.solutionIndex}`);
-        // Create a new leader line
-        arrows.push(arrowLine('#init-' + item.initialIndex, '#sorted-' + item.solutionIndex, {
-            color: colors[Math.floor(Math.random() * colors.length)], // random color
+        // Create a new leader line with consistent color based on index
+        arrows.value.push(arrowLine('#init-' + item.initialIndex, '#sorted-' + item.solutionIndex, {
+            color: colors[i % colors.length], // consistent color based on index
             thickness: 2,
             curvature: 0.5,
             style: 'dash',
@@ -56,14 +48,33 @@ onUpdated(() => {
                 size: 1
             }
         }));
-
     }
+};
+
+onUpdated(() => {
+    if (!loading.value && !error.value && crossclimbSolution.value.length > 0) {
+        // Use setTimeout to ensure DOM is fully updated
+        setTimeout(createArrows, 0);
+    }
+});
+
+// Handle window resize to redraw arrows
+const handleResize = () => {
+    if (!loading.value && !error.value && crossclimbSolution.value.length > 0) {
+        createArrows();
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
     // Clean up all leader lines when the component is unmounted
-    arrows.forEach(arrow => arrow.remove());
-    arrows.length = 0;
+    arrows.value.forEach(arrow => arrow.remove());
+    arrows.value = [];
+    // Remove resize listener
+    window.removeEventListener('resize', handleResize);
 });
 
 </script>
@@ -72,18 +83,30 @@ onUnmounted(() => {
     <div>
         <p>Crossclimb Solution:</p>
 
-        <div class="container">
+        <div v-if="loading" class="loading">
+            Loading solution...
+        </div>
+        
+        <div v-else-if="error" class="error">
+            Error: {{ error }}
+        </div>
+        
+        <div v-else-if="!crossclimbSolution.length" class="no-data">
+            No solution data available.
+        </div>
+
+        <div v-else class="container">
             <!-- Initial order column -->
             <div>
                 <h3>Initial Order</h3>
-                <div v-for="(item, idx) in initial(crossclimbSolution)" :key="'init-' + idx" class="word">
+                <div v-for="(item, idx) in initialOrder" :key="'init-' + idx" class="word">
                     <span :id="'init-' + idx">{{ item.answer }}</span>
                 </div>
             </div>
             <!-- Sorted order column -->
             <div>
                 <h3>Sorted Order</h3>
-                <div v-for="(item, idx) in sorted(crossclimbSolution)" :key="'sorted-' + idx" class="word">
+                <div v-for="(item, idx) in sortedOrder" :key="'sorted-' + idx" class="word">
                     <span :id="'sorted-' + idx">{{ item.answer }}</span>
                 </div>
             </div>
@@ -93,6 +116,26 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.loading, .error, .no-data {
+    padding: 20px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.no-data {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
 .container {
     display: flex;
     gap: 48px;
