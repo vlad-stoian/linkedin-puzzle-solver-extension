@@ -6,7 +6,7 @@ export default defineContentScript({
   world: "MAIN",
   main() {
 
-    (window as any).navigation?.addEventListener("navigate", (event: NavigateEvent) => {
+    window.navigation?.addEventListener("navigate", (event: NavigateEvent) => {
       console.log("Navigation event detected:", event);
 
       const observer = new MutationObserver(() => {
@@ -32,16 +32,6 @@ export default defineContentScript({
   },
 });
 
-declare global {
-  interface Window {
-    Ember: any;
-    Application: any;
-  }
-
-  interface NavigateEvent extends Event {
-    destination: { url: string };
-  }
-}
 
 function checkParseAndSendSolution() {
   let Ember = loadEmber();
@@ -139,11 +129,11 @@ function loadEmber(): any {
   let Ember;
 
   try {
-    Ember = (window as any).requireModule?.('ember')?.default
-      || (window as any).require?.('ember')?.default
-      || (window as any).Ember;
+    Ember = window.requireModule?.('ember')?.default
+      || window.require?.('ember')?.default
+      || window.Ember;
   } catch {
-    Ember = (window as any).Ember;
+    Ember = window.Ember;
   }
 
   return Ember;
