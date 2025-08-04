@@ -1,4 +1,5 @@
 import { ref, readonly, onMounted, type Ref } from 'vue';
+import { debug } from '@/utils/debug';
 
 export interface UseStorageReturn<T> {
   data: Readonly<Ref<T>>;
@@ -23,16 +24,16 @@ export function useStorage<T>(key: string, defaultValue: T): UseStorageReturn<T>
         try {
           data.value = JSON.parse(result[key]);
         } catch (parseError) {
-          console.error(`Error parsing ${key} from storage:`, parseError);
+          debug.error(`Error parsing ${key} from storage:`, parseError);
           error.value = `Failed to parse ${key} data`;
           data.value = defaultValue;
         }
       } else {
-        console.log(`No ${key} found in storage, using default value.`);
+        debug.log(`No ${key} found in storage, using default value.`);
         data.value = defaultValue;
       }
     } catch (storageError) {
-      console.error(`Error retrieving ${key} from storage:`, storageError);
+      debug.error(`Error retrieving ${key} from storage:`, storageError);
       error.value = `Failed to load ${key} from storage`;
       data.value = defaultValue;
     } finally {
@@ -46,7 +47,7 @@ export function useStorage<T>(key: string, defaultValue: T): UseStorageReturn<T>
       try {
         data.value = JSON.parse(changes[key].newValue);
       } catch (parseError) {
-        console.error(`Error parsing updated ${key}:`, parseError);
+        debug.error(`Error parsing updated ${key}:`, parseError);
         error.value = `Failed to parse updated ${key} data`;
       }
     }

@@ -5,6 +5,7 @@ import Queens from '@/components/Queens.vue';
 import Crossclimb from '@/components/Crossclimb.vue';
 import Pinpoint from '@/components/Pinpoint.vue';
 import Zip from '@/components/Zip.vue';
+import { debug } from '@/utils/debug';
 
 const tabs = ['Tango Solution', 'Queens Solution', 'Crossclimb Solution', 'Pinpoint Solution', 'Zip Solution'];
 const currentTab = ref(tabs[0])
@@ -40,7 +41,7 @@ function updateTab(currentGame: string | undefined) {
                 currentTab.value = tabs[4];
                 break;
             default:
-                console.warn(`Unknown game: ${currentGame}. Defaulting to Tango.`);
+                debug.warn(`Unknown game: ${currentGame}. Defaulting to Tango.`);
                 currentTab.value = tabs[0]; // Default to Tango if unknown
                 break;
         }

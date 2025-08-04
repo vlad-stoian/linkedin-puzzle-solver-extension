@@ -3,6 +3,7 @@ import { ref, onMounted, onUpdated, onUnmounted, computed } from 'vue';
 import arrowLine from 'arrow-line';
 import { useStorage } from '@/composables/useStorage';
 import type { CrossclimbSolution } from '@/types/solutions';
+import { debug } from '@/utils/debug';
 
 const defaultSolution: CrossclimbSolution = [];
 
@@ -35,7 +36,7 @@ const createArrows = () => {
     for (let i = 0; i < crossclimbSolution.value.length; i++) {
         const item = crossclimbSolution.value[i];
 
-        console.log(`Creating leader line from #init-${item.initialIndex} to #sorted-${item.solutionIndex}`);
+        debug.log(`Creating leader line from #init-${item.initialIndex} to #sorted-${item.solutionIndex}`);
         // Create a new leader line with consistent color based on index
         arrows.value.push(arrowLine('#init-' + item.initialIndex, '#sorted-' + item.solutionIndex, {
             color: colors[i % colors.length], // consistent color based on index

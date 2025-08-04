@@ -1,3 +1,5 @@
+import { debug } from '@/utils/debug';
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   runAt: "document_end",
@@ -7,11 +9,11 @@ export default defineContentScript({
   main() {
 
     window.navigation?.addEventListener("navigate", (event: NavigateEvent) => {
-      console.log("Navigation event detected:", event);
+      debug.log("Navigation event detected:", event);
 
       const observer = new MutationObserver(() => {
         if (document.querySelector('.pr-game-web__main-container')) {
-          console.log("Game main container found, disconnecting observer.");
+          debug.log("Game main container found, disconnecting observer.");
           observer.disconnect();
           checkParseAndSendSolution();
         }
@@ -36,24 +38,24 @@ export default defineContentScript({
 function checkParseAndSendSolution() {
   let Ember = loadEmber();
   if (!Ember) {
-    console.error('Ember is not loaded.');
+    debug.error('Ember is not loaded.');
     return;
   }
 
-  console.log('Ember', Ember);
+  debug.log('Ember', Ember);
   window.Ember = Ember;
 
   let Application = getApplication(Ember)
   if (!Application) {
-    console.error('No Ember application found.');
+    debug.error('No Ember application found.');
     return;
   }
-  console.log('Ember Application:', Application);
+  debug.log('Ember Application:', Application);
   window.Application = Application;
 
   let nodes = Ember._captureRenderTree(Application.__deprecatedInstance__);
   if (!nodes) {
-    console.error('No render tree nodes found.');
+    debug.error('No render tree nodes found.');
     return;
   }
 
@@ -64,42 +66,42 @@ function checkParseAndSendSolution() {
   }
 
   let gameType = flattenedNodes.find((node: { name: string; }) => node.name === 'play-routes@game-play')?.args?.named?.gameType;
-  console.log('Game type:', gameType);
+  debug.log('Game type:', gameType);
 
   switch (gameType) {
     case 'lotka':
-      console.log('Detected Tango game type.');
+      debug.log('Detected Tango game type.');
       let tangoSolution = extractTangoSolution(flattenedNodes);
-      console.log('Tango solution:', tangoSolution);
+      debug.log('Tango solution:', tangoSolution);
 
       window.dispatchEvent(new CustomEvent("MagicalNarwhal", { detail: { tangoSolution } }));
       break;
     case 'crossclimb':
-      console.log('Detected Crossclimb game type.');
+      debug.log('Detected Crossclimb game type.');
       let crossclimbSolution = extractCrossclimbSolution(flattenedNodes);
-      console.log('Crossclimb solution:', crossclimbSolution);
+      debug.log('Crossclimb solution:', crossclimbSolution);
       window.dispatchEvent(new CustomEvent("MagicalNarwhal", { detail: { crossclimbSolution } }));
       break;
     case 'pinpoint':
-      console.log('Detected Pinpoint game type.');
+      debug.log('Detected Pinpoint game type.');
       let pinpointSolution = extractPinpointSolution(flattenedNodes);
-      console.log('Pinpoint solution:', pinpointSolution);
+      debug.log('Pinpoint solution:', pinpointSolution);
       window.dispatchEvent(new CustomEvent("MagicalNarwhal", { detail: { pinpointSolution } }));
       break;
     case 'queensv2':
-      console.log('Detected Queens game type.');
+      debug.log('Detected Queens game type.');
       let queensSolution = extractQueensSolution(flattenedNodes);
-      console.log('Queens solution:', queensSolution);
+      debug.log('Queens solution:', queensSolution);
       window.dispatchEvent(new CustomEvent("MagicalNarwhal", { detail: { queensSolution } }));
       break;
     case 'trail':
-      console.log('Detected Zip game type.');
+      debug.log('Detected Zip game type.');
       let zipSolution = extractZipSolution(flattenedNodes);
-      console.log('Zip solution:', zipSolution);
+      debug.log('Zip solution:', zipSolution);
       window.dispatchEvent(new CustomEvent("MagicalNarwhal", { detail: { zipSolution } }));
       break;
     default:
-      console.log('Unsupported game type:', gameType);
+      debug.warn('Unsupported game type:', gameType);
       break;
   }
 }
@@ -178,12 +180,12 @@ function extractPinpointSolution(nodes: any[]): { [key: string]: any } {
   let acceptableAnswers = [];
   for (const node of nodes) {
     if (node.template === 'games-web/components/private/pinpoint/board-section.gts') {
-      console.log('Pinpoint board section found:', node);
+      debug.log('Pinpoint board section found:', node);
       clues.push(node.args.named.staticCard);
     }
 
     if (node.template === 'games-web/components/private/pinpoint/input-section.gts') {
-      console.log('Pinpoint input section found:', node);
+      debug.log('Pinpoint input section found:', node);
 
       for (const card of node.args.named.gameState.acceptableAnswers) {
         acceptableAnswers.push(card);
@@ -204,7 +206,7 @@ function extractQueensSolution(nodes: any[]): { [key: string]: any } {
 
   for (const node of nodes) {
     if (node.template === 'games-web/components/private/queens/game-board.gjs') {
-      console.log('Queens game board section found:', node);
+      debug.log('Queens game board section found:', node);
       for (const position of node.args.named.gameData.solution.value) {
         queenPositions.push({ row: position.row, col: position.col });
       }
@@ -239,7 +241,7 @@ function extractZipSolution(nodes: any[]): { [key: string]: any } {
 
   for (const node of nodes) {
     if (node.template === 'games-web/components/private/trail/game-board.gts') {
-      console.log('Zip game board section found:', node);
+      debug.log('Zip game board section found:', node);
       let cache = node.instance.args.gameState.trailGamePuzzle._cache
 
       for (const position of cache.orderedSequence) {

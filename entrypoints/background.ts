@@ -1,9 +1,11 @@
+import { debug } from '@/utils/debug';
+
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+  debug.log('Hello background!', { id: browser.runtime.id });
 
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error: unknown) => console.error(error));
+    .catch((error: unknown) => debug.error('Background error:', error));
 
   chrome.runtime.onMessage.addListener((
     request: { type: string; message?: string }, 
@@ -11,7 +13,7 @@ export default defineBackground(() => {
     sendResponse: (response: { reply: string }) => void
   ) => {
     if (request.type === "greeting") {
-      console.log("Content script said:", request.message);
+      debug.log("Content script said:", request.message);
       sendResponse({ reply: "Hello from background!" });
     }
   });
