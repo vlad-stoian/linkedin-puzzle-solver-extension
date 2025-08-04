@@ -1,7 +1,8 @@
 import { debug } from '@/utils/debug';
+import { LINKEDIN_GAMES_MATCHES } from '@/utils/urls';
 
 export default defineContentScript({
-  matches: ["<all_urls>"],
+  matches: LINKEDIN_GAMES_MATCHES,
   runAt: "document_start",
   matchAboutBlank: true,
   allFrames: true,

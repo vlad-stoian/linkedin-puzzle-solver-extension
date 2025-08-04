@@ -1,8 +1,9 @@
 import type { CustomEventDetail } from '@/types/solutions';
 import { debug } from '@/utils/debug';
+import { LINKEDIN_GAMES_MATCHES } from '@/utils/urls';
 
 export default defineContentScript({
-  matches: ["<all_urls>"],
+  matches: LINKEDIN_GAMES_MATCHES,
   runAt: "document_end",
   matchAboutBlank: true,
   allFrames: true,

@@ -27,4 +27,4 @@ Use responsibly! Or don't. We're not LinkedIn's puzzle police. 🚔
 
 ---
 
-*Built with Vue 3, TypeScript, and a slight sense of guilt about automating away perfectly good brain exercise.*
+*Built with WXT, Vue 3, TypeScript, and a slight sense of guilt about automating away perfectly good brain exercise.*
