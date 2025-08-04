@@ -4,10 +4,10 @@ import { useStorage } from '@/composables/useStorage';
 import type { ZipSolution } from '@/types/solutions';
 
 const defaultSolution: ZipSolution = {
-  numbers: [],
-  solution: [],
-  walls: [],
-  gridSize: 0
+    numbers: [],
+    solution: [],
+    walls: [],
+    gridSize: 0
 };
 
 const { data: zipSolution, loading, error } = useStorage<ZipSolution>('zipSolution', defaultSolution);
@@ -18,11 +18,11 @@ const walls = computed(() => zipSolution.value.walls || []);
 const numbers = computed(() => zipSolution.value.numbers || []);
 
 const solutionIndexMap = computed(() => {
-  const map: Record<number, number> = {};
-  solution.value.forEach((cell, index) => {
-    map[cell] = index;
-  });
-  return map;
+    const map: Record<number, number> = {};
+    solution.value.forEach((cell, index) => {
+        map[cell] = index;
+    });
+    return map;
 });
 
 function getCellClasses(cellIdx: number): string[] {
@@ -36,51 +36,52 @@ function getNumber(cellIdx: number): string | number {
     return n !== -1 ? n + 1 : '';
 }
 
+function getDotClasses(cellIdx: number): string[] {
+    const classes = ['dot'];
+    const solutionIndex = solutionIndexMap.value[cellIdx];
+
+    if (solutionIndex === 0) {
+        classes.push('dot--start');
+    } else if (solutionIndex === solution.value.length - 1) {
+        classes.push('dot--end');
+    } else {
+        classes.push('dot--path');
+    }
+
+    return classes;
+}
+
 </script>
 
 <template>
     <div>
         <p>Zip Solution:</p>
-        
+
         <div v-if="loading" class="loading">
             Loading solution...
         </div>
-        
+
         <div v-else-if="error" class="error">
             Error: {{ error }}
         </div>
-        
+
         <div v-else-if="!gridSize" class="no-data">
             No solution data available.
         </div>
-        
+
         <div v-else class="solution-container">
-            <svg v-if="solution.length > 1" 
-                 :width="gridSize * 60" 
-                 :height="gridSize * 60"
-                 class="solution-svg">
+            <svg v-if="solution.length > 1" :width="gridSize * 60 + 4" :height="gridSize * 60 + 4" class="solution-svg">
                 <template v-for="i in solution.length - 1" :key="`line-${i}`">
-                    <line :x1="(solution[i - 1] % gridSize) * 60 + 30"
-                          :y1="Math.floor(solution[i - 1] / gridSize) * 60 + 30" 
-                          :x2="(solution[i] % gridSize) * 60 + 30"
-                          :y2="Math.floor(solution[i] / gridSize) * 60 + 30" 
-                          stroke="#0074d9" 
-                          stroke-width="6"
-                          stroke-linecap="round" />
+                    <line :x1="(solution[i - 1] % gridSize) * 60 + 32"
+                        :y1="Math.floor(solution[i - 1] / gridSize) * 60 + 32" :x2="(solution[i] % gridSize) * 60 + 32"
+                        :y2="Math.floor(solution[i] / gridSize) * 60 + 32" stroke="#0074d9" stroke-width="6"
+                        stroke-linecap="round" />
                 </template>
             </svg>
             <div class="container" :style="`grid-template-columns: repeat(${gridSize}, 60px);`">
-                <div v-for="cellIdx in gridSize * gridSize" 
-                     :key="`cell-${cellIdx}`" 
-                     class="cell"
-                     :class="getCellClasses(cellIdx - 1)">
-                    <span v-if="solutionIndexMap[cellIdx - 1] !== undefined" 
-                          class="dot" 
-                          :class="{
-                              start: solutionIndexMap[cellIdx - 1] === 0,
-                              end: solutionIndexMap[cellIdx - 1] === solution.length - 1,
-                              path: solutionIndexMap[cellIdx - 1] !== 0 && solutionIndexMap[cellIdx - 1] !== solution.length - 1
-                          }">
+                <div v-for="cellIdx in gridSize * gridSize" :key="`cell-${cellIdx}`" class="cell"
+                    :class="getCellClasses(cellIdx - 1)">
+                    <span v-if="getNumber(cellIdx - 1) !== ''" :class="getDotClasses(cellIdx - 1)">
                         {{ getNumber(cellIdx - 1) }}
                     </span>
                 </div>
@@ -90,7 +91,9 @@ function getNumber(cellIdx: number): string | number {
 </template>
 
 <style scoped>
-.loading, .error, .no-data {
+.loading,
+.error,
+.no-data {
     padding: 20px;
     text-align: center;
     font-weight: 500;
@@ -113,12 +116,13 @@ function getNumber(cellIdx: number): string | number {
 .solution-container {
     position: relative;
     width: fit-content;
+    margin: 0 auto;
 }
 
 .solution-svg {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: -2px;
+    left: -2px;
     pointer-events: none;
     z-index: 1;
 }
@@ -158,28 +162,43 @@ function getNumber(cellIdx: number): string | number {
 
 .dot {
     position: absolute;
-    width: 38px;
-    height: 38px;
-    border-radius: 100%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 10px;
+
+    /* Size and shape */
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+
+    /* Layout */
     display: flex;
     align-items: center;
     justify-content: center;
+
+    /* Typography */
+    font-size: 12px;
+    font-weight: bold;
     color: #000;
+
+    /* Appearance */
+    background-color: #64b4ff;
+    border: 3px solid #333;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+    /* Layering */
+    z-index: 2;
 }
 
-.start {
-    background-color: #0f0;
+.dot--start {
+    background-color: #2ecc40;
 }
 
-.end {
-    background-color: #f00;
+.dot--end {
+    background-color: #ff4136;
 }
 
-.path {
+.dot--path {
     background-color: #64b4ff;
 }
 </style>
