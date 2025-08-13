@@ -47,12 +47,18 @@ export interface ZipSolution {
   gridSize: number;
 }
 
+export interface SudokuSolution {
+  grid: (number | null)[][];
+  size: number;
+}
+
 export interface CustomEventDetail {
   tangoSolution?: TangoSolution;
   queensSolution?: QueensSolution;
   crossclimbSolution?: CrossclimbSolution;
   pinpointSolution?: PinpointSolution;
   zipSolution?: ZipSolution;
+  sudokuSolution?: SudokuSolution;
 }
 
 // Global custom event interface is already defined by DOM types

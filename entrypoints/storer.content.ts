@@ -47,6 +47,13 @@ export default defineContentScript({
         window.chrome.storage.local.set({ [`currentGame`]: 'zip' });
       }
 
+      if (customEvent?.detail?.sudokuSolution) {
+        debug.log("Sudoku solution:", customEvent.detail.sudokuSolution);
+        debug.log("Sudoku solution JSON:", JSON.stringify(customEvent.detail.sudokuSolution));
+        window.chrome.storage.local.set({ [`sudokuSolution`]: JSON.stringify(customEvent.detail.sudokuSolution) });
+        window.chrome.storage.local.set({ [`currentGame`]: 'sudoku' });
+      }
+
     }, false);
   }
 });

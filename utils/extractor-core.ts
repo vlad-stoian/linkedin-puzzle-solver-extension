@@ -4,13 +4,14 @@
  */
 
 import { debug } from '@/utils/debug';
-import type { 
-  TangoSolution, 
-  CrossclimbSolution, 
-  PinpointSolution, 
-  QueensSolution, 
+import type {
+  TangoSolution,
+  CrossclimbSolution,
+  PinpointSolution,
+  QueensSolution,
   ZipSolution,
-  CustomEventDetail 
+  SudokuSolution,
+  CustomEventDetail
 } from '@/types/solutions';
 
 // ============================================================================
@@ -33,7 +34,7 @@ export interface GameDetectionResult {
   metadata?: Record<string, any>;
 }
 
-export type GameType = 'lotka' | 'crossclimb' | 'pinpoint' | 'queensv2' | 'trail';
+export type GameType = 'lotka' | 'crossclimb' | 'pinpoint' | 'queensv2' | 'trail' | 'sudoku';
 
 export interface ExtractionResult<T = any> {
   success: boolean;
@@ -53,9 +54,9 @@ export interface ExtractionResult<T = any> {
 export abstract class GameExtractor<T = any> {
   abstract readonly gameType: GameType;
   abstract readonly supportedTemplates: string[];
-  
+
   abstract extract(nodes: EmberNode[]): ExtractionResult<T>;
-  
+
   protected validateResult(data: any): boolean {
     return data !== null && data !== undefined;
   }
@@ -67,7 +68,7 @@ export class TangoExtractor extends GameExtractor<TangoSolution> {
 
   extract(nodes: EmberNode[]): ExtractionResult<TangoSolution> {
     const startTime = performance.now();
-    
+
     try {
       const solution = Array.from({ length: 6 }, () => Array(6).fill(0));
       let cellCount = 0;
@@ -76,7 +77,7 @@ export class TangoExtractor extends GameExtractor<TangoSolution> {
         if (this.supportedTemplates.includes(node.template || '')) {
           const { row, col } = node.instance || {};
           const cellValue = node.args?.named?.cellData?.solution;
-          
+
           if (this.isValidPosition(row, col) && cellValue !== undefined) {
             solution[row][col] = cellValue;
             cellCount++;
@@ -110,8 +111,8 @@ export class TangoExtractor extends GameExtractor<TangoSolution> {
   }
 
   private isValidPosition(row: number, col: number): boolean {
-    return typeof row === 'number' && typeof col === 'number' && 
-           row >= 0 && row < 6 && col >= 0 && col < 6;
+    return typeof row === 'number' && typeof col === 'number' &&
+      row >= 0 && row < 6 && col >= 0 && col < 6;
   }
 }
 
@@ -121,7 +122,7 @@ export class CrossclimbExtractor extends GameExtractor<CrossclimbSolution> {
 
   extract(nodes: EmberNode[]): ExtractionResult<CrossclimbSolution> {
     const startTime = performance.now();
-    
+
     try {
       const solution: CrossclimbSolution = [];
 
@@ -159,10 +160,10 @@ export class CrossclimbExtractor extends GameExtractor<CrossclimbSolution> {
   }
 
   private isValidCard(card: any): boolean {
-    return card && 
-           typeof card.initialIndex === 'number' && 
-           typeof card.solutionIndex === 'number' && 
-           typeof card.answer === 'string';
+    return card &&
+      typeof card.initialIndex === 'number' &&
+      typeof card.solutionIndex === 'number' &&
+      typeof card.answer === 'string';
   }
 }
 
@@ -329,6 +330,73 @@ export class ZipExtractor extends GameExtractor<ZipSolution> {
   }
 }
 
+export class SudokuExtractor extends GameExtractor<SudokuSolution> {
+  readonly gameType = 'sudoku' as const;
+  readonly supportedTemplates = ['games-web/components/private/sudoku/game-board.gts'];
+
+  extract(nodes: EmberNode[]): ExtractionResult<SudokuSolution> {
+    const startTime = performance.now();
+
+    try {
+      let columns: number = 0;
+      let rows: number = 0;
+      let cells: {expectedValue: number, isPrefilled: boolean, positionIndex: number}[] = [];
+
+      for (const node of nodes) {
+        if (this.supportedTemplates.includes(node.template || '')) {
+          debug.log('Sudoku game board found:', node);
+
+          columns = node.args?.named?.column || 0;
+          rows = node.args?.named?.row || 0;
+          cells = node.args?.named?.gameState?.cells || [];
+          break;
+        }
+      }
+
+      debug.log(`Sudoku grid size: ${columns}x${rows}, cells found: ${cells.length}`);
+
+      const gridSize = Math.max(columns, rows);
+      const grid: (number | null)[][] = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+
+      for (const cell of cells) {
+        const { expectedValue, positionIndex } = cell;
+        if (typeof expectedValue === 'number' && typeof positionIndex === 'number') {
+          const row = Math.floor(positionIndex / gridSize);
+          const col = positionIndex % gridSize;
+          if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+            grid[row][col] = expectedValue;
+          }
+        }
+      }
+
+      const result: SudokuSolution = { grid, size: gridSize };
+      const extractionTime = performance.now() - startTime;
+
+      const filledCells = grid.flat().filter(cell => cell !== null).length;
+
+      if (filledCells === 0) {
+        return {
+          success: false,
+          error: 'No valid Sudoku data found',
+          metadata: { nodeCount: nodes.length, extractionTimeMs: extractionTime, gameType: this.gameType }
+        };
+      }
+
+      return {
+        success: true,
+        data: result,
+        metadata: { nodeCount: filledCells, extractionTimeMs: extractionTime, gameType: this.gameType }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Sudoku extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        metadata: { nodeCount: nodes.length, extractionTimeMs: performance.now() - startTime, gameType: this.gameType }
+      };
+    }
+  }
+}
+
 // ============================================================================
 // EXTRACTION MANAGER
 // ============================================================================
@@ -340,15 +408,17 @@ export class ExtractionManager {
     ['pinpoint', new PinpointExtractor()],
     ['queensv2', new QueensExtractor()],
     ['trail', new ZipExtractor()],
+    ['sudoku', new SudokuExtractor()],
   ]);
 
   detectGameType(nodes: EmberNode[]): GameDetectionResult {
     const startTime = performance.now();
-    
+
     // Look for game type indicator node
     const gameTypeNode = nodes.find(node => node.name === 'play-routes@game-play');
+    debug.log('Game type node:', gameTypeNode);
     const gameType = gameTypeNode?.args?.named?.gameType as GameType;
-    
+
     if (gameType && this.extractors.has(gameType)) {
       debug.log(`Game type detected: ${gameType} (${performance.now() - startTime}ms)`);
       return {
@@ -360,12 +430,12 @@ export class ExtractionManager {
 
     // Fallback: analyze templates to infer game type
     const templateCounts = new Map<GameType, number>();
-    
+
     for (const [type, extractor] of this.extractors) {
-      const count = nodes.filter(node => 
+      const count = nodes.filter(node =>
         extractor.supportedTemplates.some(template => node.template === template)
       ).length;
-      
+
       if (count > 0) {
         templateCounts.set(type, count);
       }
@@ -381,13 +451,13 @@ export class ExtractionManager {
       .reduce((max, current) => current[1] > max[1] ? current : max);
 
     const confidence = Math.min(count / 10, 1.0); // Normalize confidence
-    
+
     debug.log(`Game type inferred from templates: ${detectedType} (confidence: ${confidence.toFixed(2)})`);
-    
+
     return {
       gameType: detectedType,
       confidence,
-      metadata: { 
+      metadata: {
         detectionTimeMs: performance.now() - startTime,
         templateMatches: count,
         method: 'template-inference'
@@ -397,7 +467,7 @@ export class ExtractionManager {
 
   extractSolution(gameType: GameType, nodes: EmberNode[]): ExtractionResult {
     const extractor = this.extractors.get(gameType);
-    
+
     if (!extractor) {
       return {
         success: false,
@@ -407,7 +477,7 @@ export class ExtractionManager {
 
     debug.log(`Extracting ${gameType} solution from ${nodes.length} nodes`);
     const result = extractor.extract(nodes);
-    
+
     if (result.success) {
       debug.log(`Successfully extracted ${gameType} solution`, result.metadata);
     } else {
@@ -419,7 +489,7 @@ export class ExtractionManager {
 
   createEventDetail(gameType: GameType, solution: any): CustomEventDetail {
     const detail: CustomEventDetail = {};
-    
+
     switch (gameType) {
       case 'lotka':
         detail.tangoSolution = solution;
@@ -436,8 +506,11 @@ export class ExtractionManager {
       case 'trail':
         detail.zipSolution = solution;
         break;
+      case 'sudoku':
+        detail.sudokuSolution = solution;
+        break;
     }
-    
+
     return detail;
   }
 }

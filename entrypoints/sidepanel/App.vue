@@ -8,6 +8,7 @@ import Queens from '@/components/Queens.vue';
 import Crossclimb from '@/components/Crossclimb.vue';
 import Pinpoint from '@/components/Pinpoint.vue';
 import Zip from '@/components/Zip.vue';
+import Sudoku from '@/components/Sudoku.vue';
 
 // ============================================================================
 // GAME CONFIGURATION
@@ -25,6 +26,7 @@ const GAME_TABS: readonly GameTab[] = [
     { id: 'crossclimb', label: 'Crossclimb Solution', component: Crossclimb },
     { id: 'pinpoint', label: 'Pinpoint Solution', component: Pinpoint },
     { id: 'zip', label: 'Zip Solution', component: Zip },
+    { id: 'sudoku', label: 'Sudoku Solution', component: Sudoku },
 ] as const;
 
 const DEFAULT_GAME = GAME_TABS[0].id;
@@ -46,7 +48,8 @@ const currentComponent = computed(() => {
         queens: Queens,
         crossclimb: Crossclimb,
         pinpoint: Pinpoint,
-        zip: Zip
+        zip: Zip,
+        sudoku: Sudoku
     };
     return componentMap[currentGameId.value] || Tango;
 });
