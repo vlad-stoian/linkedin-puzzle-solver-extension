@@ -13,7 +13,7 @@ export interface GridColor {
 
 export interface QueensSolution {
   queenPositions: QueenPosition[];
-  gridSize: number;  
+  gridSize: number;
   gridColors: GridColor[];
 }
 
@@ -27,6 +27,7 @@ export interface CrossclimbSolution extends Array<CrossclimbCard> {}
 
 export interface PinpointClue {
   clue: string;
+  position: number;
 }
 
 export interface PinpointSolution {

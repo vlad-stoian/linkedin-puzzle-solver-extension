@@ -175,7 +175,7 @@ export class PinpointExtractor extends GameExtractor<PinpointSolution> {
 
   extract(nodes: EmberNode[]): ExtractionResult<PinpointSolution> {
     const startTime = performance.now();
-    
+
     try {
       const clues: any[] = [];
       const acceptableAnswers: string[] = [];
@@ -184,7 +184,10 @@ export class PinpointExtractor extends GameExtractor<PinpointSolution> {
         if (node.template === 'games-web/components/private/pinpoint/board-section.gts') {
           const staticCard = node.args?.named?.staticCard;
           if (staticCard) {
-            clues.push(staticCard);
+            clues.push({
+              clue: staticCard.clue,
+              position: staticCard.position
+            });
           }
         } else if (node.template === 'games-web/components/private/pinpoint/input-section.gts') {
           const answers = node.args?.named?.gameState?.acceptableAnswers;
@@ -226,7 +229,7 @@ export class QueensExtractor extends GameExtractor<QueensSolution> {
 
   extract(nodes: EmberNode[]): ExtractionResult<QueensSolution> {
     const startTime = performance.now();
-    
+
     try {
       let queenPositions: any[] = [];
       let gridSize = 0;
@@ -240,7 +243,7 @@ export class QueensExtractor extends GameExtractor<QueensSolution> {
             if (Array.isArray(solution)) {
               queenPositions = solution.map(pos => ({ row: pos.row, col: pos.col }));
             }
-            
+
             gridSize = gameData.gridSize || 0;
             gridColors = gameData.cells || [];
             break; // Early termination - we found the game board
@@ -280,7 +283,7 @@ export class ZipExtractor extends GameExtractor<ZipSolution> {
 
   extract(nodes: EmberNode[]): ExtractionResult<ZipSolution> {
     const startTime = performance.now();
-    
+
     try {
       let numbers: number[] = [];
       let solution: number[] = [];

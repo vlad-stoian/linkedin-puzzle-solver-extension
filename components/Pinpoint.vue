@@ -11,13 +11,14 @@ const defaultSolution: PinpointSolution = {
 const { data: pinpointSolution, loading, error } = useStorage<PinpointSolution>('pinpointSolution', defaultSolution);
 
 const displayClues = computed(() => {
-    const clues = pinpointSolution.value.clues;
-    return clues.length > 0 ? clues.slice(1) : clues;
+    const clues = Array.from(pinpointSolution.value.clues);
+    clues.sort((a, b) => a.position - b.position);
+    return clues;
 });
 
 const displayAnswers = computed(() => {
     const answers = pinpointSolution.value.acceptableAnswers;
-    return answers.length > 0 ? answers.slice(1): answers;
+    return answers.length > 0 ? answers.slice(1) : answers;
 });
 
 </script>
